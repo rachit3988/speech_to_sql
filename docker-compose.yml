@@ -1,0 +1,60 @@
+# Local production-like stack: Postgres (with demo data and a read-only role) + the service.
+#   ANTHROPIC_API_KEY=... DEEPGRAM_API_KEY=... docker compose up --build
+# Then open http://localhost:8000
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: s2s_admin
+      POSTGRES_PASSWORD: s2s_admin_dev
+      POSTGRES_DB: speech_demo
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U s2s_admin -d speech_demo"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # One-shot: load the demo dataset (no-op if already loaded).
+  seed:
+    build: .
+    command: ["python", "-m", "speech_to_sql.demo.seed", "--if-missing",
+              "--url", "postgresql://s2s_admin:s2s_admin_dev@postgres/speech_demo"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # One-shot: create/refresh the least-privilege role the app connects as.
+  readonly-role:
+    image: postgres:17
+    command: ["psql", "postgresql://s2s_admin:s2s_admin_dev@postgres/speech_demo",
+              "-v", "ON_ERROR_STOP=1", "-v", "app_password='s2s_readonly_dev'",
+              "-f", "/sql/readonly_role.sql"]
+    volumes:
+      - ./deploy/postgres:/sql:ro
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    restart: "no"
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      S2S_ENVIRONMENT: ${S2S_ENVIRONMENT:-dev}
+      S2S_DATABASE_URL: postgresql://s2s_readonly:s2s_readonly_dev@postgres/speech_demo
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+    depends_on:
+      readonly-role:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  pgdata:

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Speech to SQL</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">◉</span>
+      <h1>Speech to SQL</h1>
+    </div>
+    <div class="topbar-actions">
+      <span id="status" class="pill" title="Service readiness">checking…</span>
+      <button id="new-chat" class="ghost" type="button">New conversation</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="auth" class="card" hidden>
+      <label for="api-key">API key</label>
+      <div class="row">
+        <input id="api-key" type="password" autocomplete="off" placeholder="Paste your X-API-Key">
+        <button id="save-key" type="button">Save</button>
+      </div>
+      <p class="hint">Stored only in this browser.</p>
+    </section>
+
+    <section id="conversation" aria-live="polite"></section>
+
+    <section class="composer card">
+      <div class="composer-row">
+        <button id="mic" class="mic" type="button" aria-label="Start recording" title="Click to talk, click again to stop">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/></svg>
+        </button>
+        <textarea id="question" rows="2" maxlength="2000"
+          placeholder="Click the mic and ask, or type: “Who were our top five customers by revenue last year?”"></textarea>
+        <button id="ask" type="button" class="primary">Ask</button>
+      </div>
+      <div class="composer-meta">
+        <span id="rec-status" class="hint"></span>
+        <label class="toggle"><input id="speak" type="checkbox"> Read answers aloud</label>
+      </div>
+    </section>
+  </main>
+
+  <template id="turn-template">
+    <article class="turn card">
+      <div class="question">
+        <span class="badge source"></span>
+        <p class="question-text"></p>
+      </div>
+      <ol class="timeline"></ol>
+      <div class="answer" hidden>
+        <p class="answer-text"></p>
+        <p class="clarify" hidden></p>
+        <ul class="assumptions" hidden></ul>
+        <details class="sql" hidden>
+          <summary>SQL <button class="copy ghost small" type="button">Copy</button></summary>
+          <pre><code></code></pre>
+        </details>
+        <div class="table-wrap" hidden><table><thead></thead><tbody></tbody></table></div>
+        <p class="meta hint"></p>
+      </div>
+      <p class="error" hidden></p>
+    </article>
+  </template>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

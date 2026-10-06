@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: s2s_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci -d s2s_test"
+          --health-interval 2s --health-timeout 3s --health-retries 30
+    env:
+      S2S_TEST_PG_DSN: postgresql://ci:ci@localhost:5432/s2s_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.18"
+      - run: uv sync --frozen
+      - run: uv run ruff check src tests evals
+      - run: uv run ruff format --check src tests evals
+      - run: uv run mypy src
+      - run: uv run pytest -q
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t speech-to-sql:ci .
